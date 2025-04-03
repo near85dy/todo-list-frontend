@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piezīmes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c2f33;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #23272a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #7289da;
+        }
+        .task {
+            padding: 10px;
+            border-bottom: 1px solid #99aab5;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .task input, .task textarea {
+            width: calc(100% - 20px);
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: #3a3f44;
+            color: white;
+        }
+        .task-status {
+            font-weight: bold;
+            color: #faa61a;
+        }
+        .task-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .task button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .save-button {
+            background-color: #43b581;
+            color: white;
+        }
+        .delete-button {
+            background-color: #f04747;
+            color: white;
+        }
+        .status-button {
+            background-color: #faa61a;
+            color: white;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #99aab5;
+            border-radius: 4px;
+            background: #2c2f33;
+            color: white;
+        }
+        .add-button {
+            background-color: #5865f2;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Piezīmes</h1>
+        <input type="text" id="taskTitle" placeholder="Virsraksts">
+        <textarea id="taskDescription" placeholder="Apraksts"></textarea>
+        <button class="add-button" onclick="addTask()">Pievienot</button>
+        <div id="tasks"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://65.108.240.22:3000/api/v1/tasks';
+
+        async function fetchTasks() {
+            const response = await fetch(API_URL);
+            const tasks = await response.json();
+            document.getElementById('tasks').innerHTML = tasks.map(task => `
+                <div class="task">
+                    <input type="text" value="${task.title}" id="title-${task.id}">
+                    <textarea id="desc-${task.id}">${task.description}</textarea>
+                    <div class="task-status">Statuss: ${task.status || 'BEGIN'}</div>
+                    <div class="task-buttons">
+                        <button class="status-button" onclick="toggleStatus('${task.id}', '${task.status}')">Mainīt statusu</button>
+                        <button class="save-button" onclick="updateTask('${task.id}')">Saglabāt</button>
+                        <button class="delete-button" onclick="deleteTask('${task.id}')">Dzēst</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addTask() {
+            const title = document.getElementById('taskTitle').value;
+            const description = document.getElementById('taskDescription').value;
+            if (!title || !description) return;
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description, status: 'BEGIN' })
+            });
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskDescription').value = '';
+            fetchTasks();
+        }
+
+        async function updateTask(id) {
+            const newTitle = document.getElementById(`title-${id}`).value;
+            const newDescription = document.getElementById(`desc-${id}`).value;
+            await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: newTitle, description: newDescription })
+            });
+            fetchTasks();
+        }
+
+        async function toggleStatus(id, currentStatus) {
+            const newStatus = currentStatus === 'BEGIN' ? 'END' : 'BEGIN';
+            await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            fetchTasks();
+        }
+
+        async function deleteTask(id) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            fetchTasks();
+        }
+
+        fetchTasks();
+    </script>
+</body>
+</html>
